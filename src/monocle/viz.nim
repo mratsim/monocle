@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import webview
-import os, strformat, strutils
+import os, strformat, strutils, json
 
 const # TODO use staticRead, but webview on Mac doesn't display anything with staticRead
   currDir    = "file://" & currentSourcePath.rsplit(DirSep, 1)[0] & "/vega"
@@ -32,21 +32,27 @@ const indexHTML = &"""
   <body>
     <div id="vis"></div>
     <script type="text/javascript">
-      var spec = "https://raw.githubusercontent.com/vega/vega/master/docs/examples/bar-chart.vg.json";
-      vegaEmbed('#vis', spec).then(function(result) {{}}).catch(console.error);
+      vegaEmbed('#vis', $1).then(function(result) {{}}).catch(console.error);
     </script>
   </body>
 </html>
 """
 
-proc main =
+proc show*(data: JsonNode) =
   # TODO: embed the template and don't require a temp file
   let fn="$1/monocle.html"%[getTempDir()]
-  writeFile(fn, indexHTML)
+  let content = indexHtml % [$data]
+  writeFile(fn, content)
   defer: removeFile(fn)
 
   var w = newWebView("Simple window demo2", "file://" & fn)
   w.run()
   w.exit()
 
-main()
+when isMainModule:
+
+  import httpclient
+
+  let data = getContent("https://raw.githubusercontent.com/vega/vega/master/docs/examples/bar-chart.vg.json")
+    .parseJson
+  show(data)
